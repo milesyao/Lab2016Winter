@@ -29,6 +29,7 @@
 #include <getopt.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <time.h>
 
 
 //system variable & public keys shared
@@ -40,17 +41,25 @@ int verbose;
 static inline void pbc_single_pairing_init(pairing_t pairing, int argc, char *argv);
 void UEActivity(unsigned char **da, unsigned char **db, unsigned char **dc, unsigned char **dcu);
 void BSActivity(unsigned char *da, unsigned char *db, unsigned char *dc, unsigned char *dcu);
-
+void usage();
 
 int main(int argc, char **argv) {
   verbose = 0;
+  clock_t start_t, end_t, total_t;
+  int times = 100;
   int k;
   int choose;
   char *para1, *para2;
-  while ((choose = getopt (argc, argv, "vf")) != -1) {
+  while ((choose = getopt (argc, argv, "vft:h")) != -1) {
     switch (choose) {
+      case 'h':
+        usage();
+        break;
       case 'v':
         verbose = 1;
+        break;
+      case 't':
+        times = atoi(optarg);
         break;
       case 'f':
         k=0;
@@ -91,6 +100,10 @@ int main(int argc, char **argv) {
           exit(-1);
         }
         break;
+        case '?':
+          fprintf(stderr, "Invalid parameters!\n");
+          usage();
+          break;
         default:
           abort();
     }
@@ -116,16 +129,22 @@ int main(int argc, char **argv) {
   unsigned char *a, *b, *c, *cu;
 
   /*******Working********/
-  printf("New user comes...\n");
-  UEActivity(&a, &b, &c, &cu);
-  BSActivity(a, b, c, cu);
+  start_t = clock();
+
+  for(int i=0; i<times; i++) {
+    printf("New user comes...\n");
+    UEActivity(&a, &b, &c, &cu);
+    BSActivity(a, b, c, cu);
+  }
 
   printf("************************\n");
 
-  printf("New user comes...\n");
-  UEActivity(&a, &b, &c, &cu);
-  BSActivity(a, b, c, cu);
 
+  end_t = clock();
+
+  total_t = (double)(end_t - start_t) / CLOCKS_PER_SEC;
+  printf("Total time taken by CPU: %f\n", (float)total_t);
+  printf("Exiting of the program...\n");
 
   element_clear(g);
   element_clear(X);
@@ -269,6 +288,15 @@ void BSActivity(unsigned char *da, unsigned char *db, unsigned char *dc, unsigne
   return;
 }
 
+  void usage() {
+    printf("****************USAGE***************\n \
+            -v: Turn on verbose mode. Print signature details.\n \
+            -h: Help info. \n \
+            -f: [FILE1](optional) [FILE2](optional): Parameter info. FILE1 and FILE2 stores pairing parameters. If use without parameters, program will use randomly generated Type A1 pairing parameters itself. \n \
+            -t: Number of times of the signature generation & verification process.\n");
+
+    return;
+  }
 
 static inline void pbc_single_pairing_init(pairing_t pairing, int argc, char *argv) {
   char s[16384];
