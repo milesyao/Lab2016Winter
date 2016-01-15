@@ -1,0 +1,32 @@
+README 
+
+This is an evaluation tool for paper "Revisiting Consistency-Availability Tradeoff in Cellular
+Mobility Support", especially focusing on the "Access Control with Unclonable Group Identification" part. 
+
+This program requires gmp-6.1.0 and pbc-0.5.14 to run. 
+
+****************USAGE***************
+-v: Turn on verbose mode. Print signature details.
+-h: Display help info. 
+-f [FILE1][FILE2]: Set pairing parameter info from files on disk. FILE1 and FILE2 stores pairing parameters.
+-n: Number of users of the signature generation & verification process. 100 by default.
+-g [rbits] [qbits]: Set pairing parameter info by rbits and qbits. The group order r is rbits long, and the order of 
+the base field q is qbits long. Elements take qbits to represent.
+
+
+****************ATTENTION*******************
+1. -g or -f can only be used once per command. 
+2. For -f, example parameter files are stored under ./param/*
+3. For -g, you must set both "rbits" "qbits" to let program run normally.
+4. Once run successfully, you will see the following:
+======================
+User number: X. 
+Total Generation & verification time taken by CPU: 0.019844 seconds.
+Total verification time at base station taken by CPU: 0.002325 seconds.
+Exiting of the program...
+======================
+
+Chunnan Yao
+2015.1.14
+
+

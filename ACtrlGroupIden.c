@@ -6,12 +6,6 @@
 //  Copyright © 2016 cnyao. All rights reserved.
 //
 
-// Boneh-Lynn-Shacham short signatures demo.
-//
-// See the PBC_sig library for a practical implementation.
-//
-// Ben Lynn
-
 // Let me clarify it: we haven't implement step 1 or 2, 
 // because they are currently not planned for evaluation
 //  (they are bootstrap steps and not bottleneck). Instead, 
@@ -45,68 +39,84 @@ void usage();
 
 int main(int argc, char **argv) {
   verbose = 0;
-  clock_t start_t, end_t, total_t;
-  int times = 100;
+  int canrun =0;
+  clock_t start_t, end_t;
+  float total_t;
+  int user_num = 100;
   int k;
   int choose;
   char *para1, *para2;
-  while ((choose = getopt (argc, argv, "vft:h")) != -1) {
+  while ((choose = getopt (argc, argv, "vfn:hg")) != -1) {
     switch (choose) {
       case 'h':
         usage();
+        exit(0);
         break;
       case 'v':
         verbose = 1;
         break;
-      case 't':
-        times = atoi(optarg);
+      case 'n':
+        user_num = atoi(optarg);
+        break;
+      case 'g':
+        printf("Initializing pairing parameters...\n");
+        if(canrun) {
+          fprintf(stderr, "Pairing parameters have been set, \'-g\' should not set paring parameters again.\n");
+          break;
+        }
+        canrun = 1;
+        k=0;
+        for( ; optind<argc && !(*argv[optind] == '-'); optind++) k++;
+        if(k==2) {
+          int rbits = atoi(argv[optind-k]);
+          int qbits = atoi(argv[optind-k+1]);
+          pbc_param_t param;
+
+          pbc_param_init_a_gen(param, rbits, qbits);
+          pairing_init_pbc_param(pairing, param);
+
+          pbc_param_init_a_gen(param, rbits, qbits);
+          pairing_init_pbc_param(pairing2, param);
+
+          pbc_param_clear(param);
+        } else {
+          fprintf(stderr, "Input invalid!\n");
+          usage();
+          exit(-1);
+        }
         break;
       case 'f':
+        printf("Initializing pairing parameters...\n");
+        if(canrun) {
+          fprintf(stderr, "Pairing parameters have been set, \'-f\' should not set paring parameters again.\n");
+          break;
+        }
+        canrun = 1;
         k=0;
         for( ; optind<argc && !(*argv[optind] == '-'); optind++) k++;
         if(k==2) {
           pbc_single_pairing_init(pairing, argc, argv[optind-k]);
           pbc_single_pairing_init(pairing2, argc, argv[optind-k+1]);
-        } 
-        else if(k==0) {
-          //to do: generate param using pbc_param_init_a1_gen
-          mpz_t rand_Num, prime;
-          unsigned long int i, seed;
-          gmp_randstate_t r_state;
-          pbc_param_t param;
-
-          seed = 12345678;
-          gmp_randinit_default (r_state);
-          gmp_randseed_ui(r_state, seed);
-
-          mpz_init(rand_Num);
-          mpz_init(prime);
-          mpz_urandomb(rand_Num,r_state,200);
-
-          mpz_nextprime(prime, rand_Num);
-          pbc_param_init_a1_gen(param, prime);
-          pairing_init_pbc_param(pairing, param);
-
-          mpz_nextprime(prime, rand_Num);
-          pbc_param_init_a1_gen(param, prime);
-          pairing_init_pbc_param(pairing2, param);
-
-          gmp_randclear(r_state);
-          mpz_clear(rand_Num);
-          mpz_clear(prime);
-          pbc_param_clear(param);
-        } else {
+        }  
+        else {
           fprintf(stderr, "Input invalid!\n");
+          usage();
           exit(-1);
         }
         break;
         case '?':
           fprintf(stderr, "Invalid parameters!\n");
           usage();
+          exit(-1);
           break;
         default:
           abort();
     }
+  }
+  if(!canrun) {
+    printf("Please at least set \'-f\' or \'-g\'\n");
+    usage();
+    exit(-1);
   }
 
   printf("Initializing system variable and public key....\n");
@@ -130,11 +140,15 @@ int main(int argc, char **argv) {
 
   /*******Working********/
   start_t = clock();
-
-  for(int i=0; i<times; i++) {
+  clock_t tmp_start;
+  clock_t bscurtotal = 0.0;
+  float bstotal;
+  for(int i=0; i<user_num; i++) {
     printf("New user comes...\n");
     UEActivity(&a, &b, &c, &cu);
+    tmp_start = clock();
     BSActivity(a, b, c, cu);
+    bscurtotal += clock() - tmp_start;
   }
 
   printf("************************\n");
@@ -142,8 +156,10 @@ int main(int argc, char **argv) {
 
   end_t = clock();
 
-  total_t = (double)(end_t - start_t) / CLOCKS_PER_SEC;
-  printf("Total time taken by CPU: %f\n", (float)total_t);
+  total_t = (float)(end_t - start_t) / CLOCKS_PER_SEC;
+  bstotal = (float)bscurtotal / CLOCKS_PER_SEC;
+  printf("User number: %d. \nTotal Generation & verification time taken by CPU: %f seconds.\n", user_num, total_t);
+  printf("Total verification time at base station taken by CPU: %f seconds.\n", bstotal);
   printf("Exiting of the program...\n");
 
   element_clear(g);
@@ -290,10 +306,12 @@ void BSActivity(unsigned char *da, unsigned char *db, unsigned char *dc, unsigne
 
   void usage() {
     printf("****************USAGE***************\n \
-            -v: Turn on verbose mode. Print signature details.\n \
-            -h: Help info. \n \
-            -f: [FILE1](optional) [FILE2](optional): Parameter info. FILE1 and FILE2 stores pairing parameters. If use without parameters, program will use randomly generated Type A1 pairing parameters itself. \n \
-            -t: Number of times of the signature generation & verification process.\n");
+-v: Turn on verbose mode. Print signature details.\n \
+-h: Help info. \n \
+-f [FILE1][FILE2]: Set pairing parameter info from files on disk. FILE1 and FILE2 stores pairing parameters.\n \
+-n: Number of users of the signature generation & verification process. 100 by default. \n \
+-g [rbits] [qbits]: Set pairing parameter info by rbits and qbits. The group order r is rbits long, and the order of \
+the base field q is qbits long. Elements take qbits to represent.\n");
 
     return;
   }
