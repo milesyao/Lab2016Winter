@@ -28,9 +28,11 @@
 
 //system variable & public keys shared
 element_t g, X, Y, x, y;
+mpz_t mpz_x, mpz_y;
 pairing_t pairing;
 pairing_t pairing2;
 int verbose;
+int ifsize;
 
 static inline void pbc_single_pairing_init(pairing_t pairing, int argc, char *argv);
 void UEActivity(unsigned char **da, unsigned char **db, unsigned char **dc, unsigned char **dcu);
@@ -39,6 +41,7 @@ void usage();
 
 int main(int argc, char **argv) {
   verbose = 0;
+  ifsize = 0;
   int canrun =0;
   clock_t start_t, end_t;
   float total_t;
@@ -46,8 +49,11 @@ int main(int argc, char **argv) {
   int k;
   int choose;
   char *para1, *para2;
-  while ((choose = getopt (argc, argv, "vfn:hg")) != -1) {
+  while ((choose = getopt (argc, argv, "vfn:hgs")) != -1) {
     switch (choose) {
+      case 's':
+        ifsize = 1;
+        break;
       case 'h':
         usage();
         exit(0);
@@ -59,7 +65,7 @@ int main(int argc, char **argv) {
         user_num = atoi(optarg);
         break;
       case 'g':
-        printf("Initializing pairing parameters...\n");
+        //printf("Initializing pairing parameters...\n");
         if(canrun) {
           fprintf(stderr, "Pairing parameters have been set, \'-g\' should not set paring parameters again.\n");
           break;
@@ -72,13 +78,14 @@ int main(int argc, char **argv) {
           int qbits = atoi(argv[optind-k+1]);
           pbc_param_t param;
 
+          // printf("rbits=%d qbits=%d\n",rbits,qbits);
+
           pbc_param_init_a_gen(param, rbits, qbits);
           pairing_init_pbc_param(pairing, param);
 
-          pbc_param_init_a_gen(param, rbits, qbits);
           pairing_init_pbc_param(pairing2, param);
 
-          pbc_param_clear(param);
+          // pbc_param_clear(param);
         } else {
           fprintf(stderr, "Input invalid!\n");
           usage();
@@ -86,7 +93,7 @@ int main(int argc, char **argv) {
         }
         break;
       case 'f':
-        printf("Initializing pairing parameters...\n");
+        //printf("Initializing pairing parameters...\n");
         if(canrun) {
           fprintf(stderr, "Pairing parameters have been set, \'-f\' should not set paring parameters again.\n");
           break;
@@ -119,8 +126,7 @@ int main(int argc, char **argv) {
     exit(-1);
   }
 
-  printf("Initializing system variable and public key....\n");
-
+  //printf("Initializing system variable and public key....\n");
   element_init_G2(g, pairing);
   element_init_G2(X, pairing);
   element_init_G2(Y, pairing);
@@ -130,12 +136,33 @@ int main(int argc, char **argv) {
   element_random(x);
   element_random(y);
 
+  printf("g=%lu X=%lu Y=%lu x=%lu y=%lu\n",sizeof(g),sizeof(X),sizeof(Y),sizeof(x),sizeof(y));
+
   //system variable & public key generation
   element_random(g);
   if(verbose) element_printf("system parameter g = %B\n", g);
-  element_pow_zn(X, g, x);
-  element_pow_zn(Y, g, y);
-
+  mpz_t mpz_g, mpz_X, mpz_Y;
+  mpz_inits(mpz_g, mpz_X, mpz_Y, mpz_x, mpz_y, NULL);
+  element_to_mpz(mpz_g, g);
+  element_to_mpz(mpz_x, x);
+  element_to_mpz(mpz_y, y); 
+  mpz_powm(mpz_X, mpz_g, mpz_x, pairing->r);
+  element_set_mpz(X, mpz_X);
+  //element_pow_zn(X, g, x);
+  mpz_powm(mpz_Y, mpz_g, mpz_y, pairing->r);
+  element_set_mpz(Y, mpz_Y);
+  if(verbose) {
+        gmp_printf("pair order %zd\n", pairing->r);
+	gmp_printf("mpz g %zd\n", mpz_g);
+        element_printf("x = %B\n", x);
+	gmp_printf("mpz x %zd\n", mpz_x);
+        gmp_printf("mpz y %zd\n", mpz_y);
+        gmp_printf("mpz X %zd\n", mpz_X);
+	element_printf("public key X = %B\n", X);
+        element_printf("public key Y = %B\n", Y);
+  }
+//element_pow_zn(Y, g, y);
+  mpz_clear(mpz_g);mpz_clear(mpz_X);mpz_clear(mpz_Y);
   unsigned char *a, *b, *c, *cu;
 
   /*******Working********/
@@ -143,24 +170,27 @@ int main(int argc, char **argv) {
   clock_t tmp_start;
   clock_t bscurtotal = 0.0;
   float bstotal;
+  clock_t tmp=0;
   for(int i=0; i<user_num; i++) {
-    printf("New user comes...\n");
+    //printf("New user comes...\n");
     UEActivity(&a, &b, &c, &cu);
     tmp_start = clock();
     BSActivity(a, b, c, cu);
-    bscurtotal += clock() - tmp_start;
+    tmp = clock() - tmp_start;
+    printf("%f\n",(float)tmp*1000 / CLOCKS_PER_SEC);
+    bscurtotal += tmp;
   }
 
-  printf("************************\n");
+  //printf("************************\n");
 
 
   end_t = clock();
 
   total_t = (float)(end_t - start_t) / CLOCKS_PER_SEC;
   bstotal = (float)bscurtotal / CLOCKS_PER_SEC;
-  printf("User number: %d. \nTotal Generation & verification time taken by CPU: %f seconds.\n", user_num, total_t);
-  printf("Total verification time at base station taken by CPU: %f seconds.\n", bstotal);
-  printf("Exiting of the program...\n");
+  //printf("User number: %d. \nTotal Generation & verification time taken by CPU: %f seconds.\n", user_num, total_t);
+  //printf("Total verification time at base station taken by CPU: %f seconds.\n", bstotal);
+  //printf("Exiting of the program...\n");
 
   element_clear(g);
   element_clear(X);
@@ -172,7 +202,7 @@ int main(int argc, char **argv) {
 }
 
 void UEActivity(unsigned char **da, unsigned char **db, unsigned char **dc, unsigned char **dcu) {
-  printf("Generating keys.....\n");
+  //printf("Generating keys.....\n");
 
   element_t a, b, c, cu, r, A, B, C;
   element_t ax, a1cuxy;
@@ -200,20 +230,38 @@ void UEActivity(unsigned char **da, unsigned char **db, unsigned char **dc, unsi
   element_random(cu);
   element_random(a);
   if(verbose) element_printf("sig component a = %B\n", a);
-  element_pow_zn(b, a, y);
+  mpz_t mpz_a, mpz_b, mpz_c;
+  mpz_inits(mpz_a, mpz_b, mpz_c, NULL);
+  element_to_mpz(mpz_a, a);
+  mpz_powm(mpz_b, mpz_a, mpz_y, pairing->r);
+  element_set_mpz(b, mpz_b);
+ //element_pow_zn(b, a, y);
+  
   if(verbose) element_printf("sig component b = %B\n", b);
-  element_pow_zn(ax, a, x);
+  mpz_t mpz_ax, mpz_a1cuxy, mpz_cuxy;
+  mpz_inits(mpz_ax, mpz_a1cuxy, mpz_cuxy, NULL);
+  mpz_powm(mpz_ax, mpz_a, mpz_x, pairing->r);
+  element_set_mpz(ax, mpz_ax);
+
   element_mul(xy, x, y);
   element_mul(cuxy, xy, cu);
-  element_pow_zn(a1cuxy, a, cuxy);
+  element_to_mpz(mpz_cuxy, cuxy);
+  mpz_powm(mpz_a1cuxy, mpz_a, mpz_cuxy, pairing->r);
+  element_set_mpz(a1cuxy, mpz_a1cuxy);
   element_mul(c, ax, a1cuxy);
   if(verbose) element_printf("sig component c = %B\n", c);
 
   //blind the signature
+  mpz_t mpz_A, mpz_B, mpz_C, mpz_r;
+  mpz_inits(mpz_A, mpz_B, mpz_C, mpz_r, NULL);
   element_random(r);
-  element_pow_zn(A, a, r);
-  element_pow_zn(B, b, r);
-  element_pow_zn(C, c, r);
+  element_to_mpz(mpz_r, r);
+  mpz_powm(mpz_A, mpz_a, mpz_r, pairing->r);
+  mpz_powm(mpz_B, mpz_b, mpz_r, pairing->r);
+  mpz_powm(mpz_C, mpz_c, mpz_r, pairing->r);
+  element_set_mpz(A, mpz_A);
+  element_set_mpz(B, mpz_B);
+  element_set_mpz(C, mpz_C);  
   
   //clear meta elements
   element_clear(ax);
@@ -224,7 +272,17 @@ void UEActivity(unsigned char **da, unsigned char **db, unsigned char **dc, unsi
   element_clear(a);
   element_clear(b);
   element_clear(c);
-
+  mpz_clear(mpz_a);
+  mpz_clear(mpz_b);
+  mpz_clear(mpz_c);
+  mpz_clear(mpz_ax);
+  mpz_clear(mpz_a1cuxy);
+  mpz_clear(mpz_cuxy);
+  mpz_clear(mpz_A);
+  mpz_clear(mpz_B);
+  mpz_clear(mpz_C);
+  mpz_clear(mpz_r);
+  
   //signature compress
   int n = pairing_length_in_bytes_compressed_G1(pairing);
   int m = pairing_length_in_bytes_Zr(pairing2);
@@ -242,7 +300,7 @@ void UEActivity(unsigned char **da, unsigned char **db, unsigned char **dc, unsi
 
 void BSActivity(unsigned char *da, unsigned char *db, unsigned char *dc, unsigned char *dcu) {
   //signature decompress
-  printf("Verifying....\n");
+  //printf("Verifying....\n");
 
   element_t cu, A, B, C;
   element_init_G1(A, pairing);
@@ -254,6 +312,11 @@ void BSActivity(unsigned char *da, unsigned char *db, unsigned char *dc, unsigne
   element_from_bytes_compressed(B, db);
   element_from_bytes_compressed(C, dc);
   element_from_bytes(cu, dcu);
+
+  pbc_free(da);
+  pbc_free(db);
+  pbc_free(dc);
+  pbc_free(dcu);
  
   //verification I
   element_t exbcu;
@@ -271,7 +334,7 @@ void BSActivity(unsigned char *da, unsigned char *db, unsigned char *dc, unsigne
   element_pairing(right, g, C);
 
   if (!element_cmp(left, right)) {
-          printf("part 1 verifies\n");
+          //printf("part 1 verifies\n");
   } else {
       printf("*BUG* part 1 does not verify *BUG*\n");
   }
@@ -281,15 +344,17 @@ void BSActivity(unsigned char *da, unsigned char *db, unsigned char *dc, unsigne
   element_pairing(right, g, B);
 
   if (!element_cmp(left, right)) {
-          printf("part 2 verifies\n");
+          //printf("part 2 verifies\n");
   } else {
       printf("*BUG* part 2 does not verify *BUG*\n");
   }
 
-  pbc_free(da);
-  pbc_free(db);
-  pbc_free(dc);
-  pbc_free(dcu);
+  if(ifsize) {
+    int totalsize = sizeof(tmp1) + sizeof(tmp2) + sizeof(right) + sizeof(left) + 
+                    sizeof(A) + sizeof(B) + sizeof(C) + sizeof(cu);
+    printf("Memory used in base station is %d bytes. \n", totalsize);
+
+  }
 
   element_clear(exbcu);
   element_clear(tmp1);
@@ -311,7 +376,8 @@ void BSActivity(unsigned char *da, unsigned char *db, unsigned char *dc, unsigne
 -f [FILE1][FILE2]: Set pairing parameter info from files on disk. FILE1 and FILE2 stores pairing parameters.\n \
 -n: Number of users of the signature generation & verification process. 100 by default. \n \
 -g [rbits] [qbits]: Set pairing parameter info by rbits and qbits. The group order r is rbits long, and the order of \
-the base field q is qbits long. Elements take qbits to represent.\n");
+the base field q is qbits long. Elements take qbits to represent.\n \
+-s: once used, the memory used by BS will be printed (in bytes). ");
 
     return;
   }
