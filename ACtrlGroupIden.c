@@ -28,7 +28,6 @@
 
 //system variable & public keys shared
 element_t g, X, Y, x, y;
-mpz_t mpz_x, mpz_y;
 pairing_t pairing;
 pairing_t pairing2;
 int verbose;
@@ -85,7 +84,7 @@ int main(int argc, char **argv) {
 
           pairing_init_pbc_param(pairing2, param);
 
-          // pbc_param_clear(param);
+          pbc_param_clear(param);
         } else {
           fprintf(stderr, "Input invalid!\n");
           usage();
@@ -141,28 +140,30 @@ int main(int argc, char **argv) {
   //system variable & public key generation
   element_random(g);
   if(verbose) element_printf("system parameter g = %B\n", g);
-  mpz_t mpz_g, mpz_X, mpz_Y;
-  mpz_inits(mpz_g, mpz_X, mpz_Y, mpz_x, mpz_y, NULL);
-  element_to_mpz(mpz_g, g);
-  element_to_mpz(mpz_x, x);
-  element_to_mpz(mpz_y, y); 
-  mpz_powm(mpz_X, mpz_g, mpz_x, pairing->r);
-  element_set_mpz(X, mpz_X);
-  //element_pow_zn(X, g, x);
-  mpz_powm(mpz_Y, mpz_g, mpz_y, pairing->r);
-  element_set_mpz(Y, mpz_Y);
-  if(verbose) {
-        gmp_printf("pair order %zd\n", pairing->r);
-	gmp_printf("mpz g %zd\n", mpz_g);
-        element_printf("x = %B\n", x);
-	gmp_printf("mpz x %zd\n", mpz_x);
-        gmp_printf("mpz y %zd\n", mpz_y);
-        gmp_printf("mpz X %zd\n", mpz_X);
-	element_printf("public key X = %B\n", X);
-        element_printf("public key Y = %B\n", Y);
-  }
-//element_pow_zn(Y, g, y);
-  mpz_clear(mpz_g);mpz_clear(mpz_X);mpz_clear(mpz_Y);
+  element_pow_zn(X, g, x);
+  element_pow_zn(Y, g, y);
+//   mpz_t mpz_g, mpz_X, mpz_Y;
+//   mpz_inits(mpz_g, mpz_X, mpz_Y, mpz_x, mpz_y, NULL);
+//   element_to_mpz(mpz_g, g);
+//   element_to_mpz(mpz_x, x);
+//   element_to_mpz(mpz_y, y); 
+//   mpz_powm(mpz_X, mpz_g, mpz_x, pairing->r);
+//   element_set_mpz(X, mpz_X);
+//   //element_pow_zn(X, g, x);
+//   mpz_powm(mpz_Y, mpz_g, mpz_y, pairing->r);
+//   element_set_mpz(Y, mpz_Y);
+//   if(verbose) {
+//         gmp_printf("pair order %zd\n", pairing->r);
+// 	gmp_printf("mpz g %zd\n", mpz_g);
+//         element_printf("x = %B\n", x);
+// 	gmp_printf("mpz x %zd\n", mpz_x);
+//         gmp_printf("mpz y %zd\n", mpz_y);
+//         gmp_printf("mpz X %zd\n", mpz_X);
+// 	element_printf("public key X = %B\n", X);
+//         element_printf("public key Y = %B\n", Y);
+//   }
+// //element_pow_zn(Y, g, y);
+//   mpz_clear(mpz_g);mpz_clear(mpz_X);mpz_clear(mpz_Y);
   unsigned char *a, *b, *c, *cu;
 
   /*******Working********/
@@ -177,7 +178,7 @@ int main(int argc, char **argv) {
     tmp_start = clock();
     BSActivity(a, b, c, cu);
     tmp = clock() - tmp_start;
-    printf("%f\n",(float)tmp*1000 / CLOCKS_PER_SEC);
+    printf("Processing time for this user is %f ms \n",(float)tmp*1000 / CLOCKS_PER_SEC);
     bscurtotal += tmp;
   }
 
@@ -230,38 +231,44 @@ void UEActivity(unsigned char **da, unsigned char **db, unsigned char **dc, unsi
   element_random(cu);
   element_random(a);
   if(verbose) element_printf("sig component a = %B\n", a);
-  mpz_t mpz_a, mpz_b, mpz_c;
-  mpz_inits(mpz_a, mpz_b, mpz_c, NULL);
-  element_to_mpz(mpz_a, a);
-  mpz_powm(mpz_b, mpz_a, mpz_y, pairing->r);
-  element_set_mpz(b, mpz_b);
+  element_pow_zn(b, a, y);
+  // mpz_t mpz_a, mpz_b, mpz_c;
+  // mpz_inits(mpz_a, mpz_b, mpz_c, NULL);
+  // element_to_mpz(mpz_a, a);
+  // mpz_powm(mpz_b, mpz_a, mpz_y, pairing->r);
+  // element_set_mpz(b, mpz_b);
  //element_pow_zn(b, a, y);
   
   if(verbose) element_printf("sig component b = %B\n", b);
-  mpz_t mpz_ax, mpz_a1cuxy, mpz_cuxy;
-  mpz_inits(mpz_ax, mpz_a1cuxy, mpz_cuxy, NULL);
-  mpz_powm(mpz_ax, mpz_a, mpz_x, pairing->r);
-  element_set_mpz(ax, mpz_ax);
+  element_pow_zn(ax, a, x);
+  // mpz_t mpz_ax, mpz_a1cuxy, mpz_cuxy;
+  // mpz_inits(mpz_ax, mpz_a1cuxy, mpz_cuxy, NULL);
+  // mpz_powm(mpz_ax, mpz_a, mpz_x, pairing->r);
+  // element_set_mpz(ax, mpz_ax);
 
   element_mul(xy, x, y);
   element_mul(cuxy, xy, cu);
-  element_to_mpz(mpz_cuxy, cuxy);
-  mpz_powm(mpz_a1cuxy, mpz_a, mpz_cuxy, pairing->r);
-  element_set_mpz(a1cuxy, mpz_a1cuxy);
+  element_pow_zn(a1cuxy, a, cuxy);
+  // element_to_mpz(mpz_cuxy, cuxy);
+  // mpz_powm(mpz_a1cuxy, mpz_a, mpz_cuxy, pairing->r);
+  // element_set_mpz(a1cuxy, mpz_a1cuxy);
   element_mul(c, ax, a1cuxy);
   if(verbose) element_printf("sig component c = %B\n", c);
 
   //blind the signature
-  mpz_t mpz_A, mpz_B, mpz_C, mpz_r;
-  mpz_inits(mpz_A, mpz_B, mpz_C, mpz_r, NULL);
+  // mpz_t mpz_A, mpz_B, mpz_C, mpz_r;
+  // mpz_inits(mpz_A, mpz_B, mpz_C, mpz_r, NULL);
   element_random(r);
-  element_to_mpz(mpz_r, r);
-  mpz_powm(mpz_A, mpz_a, mpz_r, pairing->r);
-  mpz_powm(mpz_B, mpz_b, mpz_r, pairing->r);
-  mpz_powm(mpz_C, mpz_c, mpz_r, pairing->r);
-  element_set_mpz(A, mpz_A);
-  element_set_mpz(B, mpz_B);
-  element_set_mpz(C, mpz_C);  
+  element_pow_zn(A, a, r);
+  element_pow_zn(B, b, r);
+  element_pow_zn(C, c, r);
+  // element_to_mpz(mpz_r, r);
+  // mpz_powm(mpz_A, mpz_a, mpz_r, pairing->r);
+  // mpz_powm(mpz_B, mpz_b, mpz_r, pairing->r);
+  // mpz_powm(mpz_C, mpz_c, mpz_r, pairing->r);
+  // element_set_mpz(A, mpz_A);
+  // element_set_mpz(B, mpz_B);
+  // element_set_mpz(C, mpz_C);  
   
   //clear meta elements
   element_clear(ax);
@@ -272,16 +279,16 @@ void UEActivity(unsigned char **da, unsigned char **db, unsigned char **dc, unsi
   element_clear(a);
   element_clear(b);
   element_clear(c);
-  mpz_clear(mpz_a);
-  mpz_clear(mpz_b);
-  mpz_clear(mpz_c);
-  mpz_clear(mpz_ax);
-  mpz_clear(mpz_a1cuxy);
-  mpz_clear(mpz_cuxy);
-  mpz_clear(mpz_A);
-  mpz_clear(mpz_B);
-  mpz_clear(mpz_C);
-  mpz_clear(mpz_r);
+  // mpz_clear(mpz_a);
+  // mpz_clear(mpz_b);
+  // mpz_clear(mpz_c);
+  // mpz_clear(mpz_ax);
+  // mpz_clear(mpz_a1cuxy);
+  // mpz_clear(mpz_cuxy);
+  // mpz_clear(mpz_A);
+  // mpz_clear(mpz_B);
+  // mpz_clear(mpz_C);
+  // mpz_clear(mpz_r);
   
   //signature compress
   int n = pairing_length_in_bytes_compressed_G1(pairing);
@@ -352,7 +359,7 @@ void BSActivity(unsigned char *da, unsigned char *db, unsigned char *dc, unsigne
   if(ifsize) {
     int totalsize = sizeof(tmp1) + sizeof(tmp2) + sizeof(right) + sizeof(left) + 
                     sizeof(A) + sizeof(B) + sizeof(C) + sizeof(cu);
-    printf("Memory used in base station is %d bytes. \n", totalsize);
+    printf("Memory used at base station is %d bytes. \n", totalsize);
 
   }
 
