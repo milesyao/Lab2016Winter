@@ -5,7 +5,11 @@ Mobility Support", especially focusing on the "Access Control with Unclonable Gr
 
 This program requires gmp-6.1.0 and pbc-0.5.14 to run. 
 
-****************USAGE***************
+USAGE
+=====
+
+Access Control with Unclonable Group Identification
+---------------------------------------------------
 -v: Turn on verbose mode. Print signature details.
 -h: Display help info. 
 -f [FILE1][FILE2]: Set pairing parameter info from files on disk. FILE1 and FILE2 stores pairing parameters.
@@ -13,6 +17,14 @@ This program requires gmp-6.1.0 and pbc-0.5.14 to run.
 -g [rbits] [qbits]: Set pairing parameter info by rbits and qbits. The group order r is rbits long, and the order of 
 the base field q is qbits long. Elements take qbits to represent.
 
+Diffie-Hellman key exchange
+---------------------------
+-v: Turn on verbose mode. Print signature details.
+-h: Help info. 
+-n: Number of users of the signature generation & verification process. 100 by default. 
+-g [rbits] [qbits]: Set pairing parameter info by rbits and qbits. The group order r is rbits long, and the order of 
+the base field q is qbits long. Elements take qbits to represent.
+-s: once used, the memory used by BS will be printed (in bytes). 
 
 ****************ATTENTION*******************
 1. -g or -f can only be used once per command. 
@@ -27,6 +39,4 @@ Exiting of the program...
 ======================
 
 Chunnan Yao
-2015.1.14
-
-
+2015.1.19 revised

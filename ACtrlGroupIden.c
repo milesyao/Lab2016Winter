@@ -169,19 +169,29 @@ int main(int argc, char **argv) {
   /*******Working********/
   start_t = clock();
   clock_t tmp_start;
-  clock_t bscurtotal = 0.0;
+  clock_t bscurtotal = 0;
   float bstotal;
   clock_t tmp=0;
+  clock_t max;
+  clock_t min;
   for(int i=0; i<user_num; i++) {
     //printf("New user comes...\n");
     UEActivity(&a, &b, &c, &cu);
     tmp_start = clock();
     BSActivity(a, b, c, cu);
     tmp = clock() - tmp_start;
+    if(i==0) {min = tmp; max = tmp;}
+    else {
+    	if(tmp > max) max = tmp;
+    	if(tmp < min) min = tmp;
+    }
     printf("Processing time for this user is %f ms \n",(float)tmp*1000 / CLOCKS_PER_SEC);
     bscurtotal += tmp;
   }
-
+    clock_t avg = bscurtotal / user_num;
+    printf("max single user time is %f ms \n",(float)max*1000 / CLOCKS_PER_SEC); 
+    printf("min single user time is %f ms \n",(float)min*1000 / CLOCKS_PER_SEC);
+    printf("average single user time is %f ms \n",(float)avg*1000 / CLOCKS_PER_SEC);
   //printf("************************\n");
 
 

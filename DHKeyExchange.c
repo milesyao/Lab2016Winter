@@ -98,17 +98,27 @@ int main(int argc, char **argv) {
   element_random(g);
 
   unsigned char *a;
-
+  clock_t max, min, ttotal=0;
   clock_t tmp_start, tmp;
   for(int i=0; i<user_num; i++) {
 	  UEActivity(&a);
 	  tmp_start = clock();
 	  BSActivity(a);  
 	  tmp = clock() - tmp_start;
+	  if(i==0) {max = tmp; min = tmp;}
+          else {
+		if(tmp > max) max = tmp;
+                if(tmp < min) min = tmp;
+	  }
+	  ttotal += tmp;
 	  printf("Processing time for this user is %f ms \n",(float)tmp*1000 / CLOCKS_PER_SEC);
   }
-
-
+          clock_t avg = ttotal / user_num;
+    printf("max single user time is %f ms \n",(float)max*1000 / CLOCKS_PER_SEC); 
+    printf("min single user time is %f ms \n",(float)min*1000 / CLOCKS_PER_SEC);
+    printf("average single user time is %f ms \n",(float)avg*1000 / CLOCKS_PER_SEC);
+          
+ 
   element_clear(g);
 
   return 0;
