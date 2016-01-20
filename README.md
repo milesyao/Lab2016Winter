@@ -39,4 +39,10 @@ Exiting of the program...
 ======================
 
 Chunnan Yao
+<<<<<<< HEAD:README.md
 2015.1.19 revised
+=======
+2015.1.19 revised
+
+
+>>>>>>> a23ddd0e40bbf21e5d0abd46186578a16717fb88:README
